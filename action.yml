@@ -1,0 +1,9 @@
+name: 'Github PR Auto Tagger'
+description: 'increment tag and push it'
+author: 'Ruelala'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+branding:
+  icon: 'git-merge'  
+  color: 'purple'
