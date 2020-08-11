@@ -27,21 +27,25 @@ function semver_bump() {
 
 merge_commit_sha=$(cat "$GITHUB_EVENT_PATH" | jq -r '.pull_request.merge_commit_sha')
 merge_commit_message=$(git --no-pager log --format=%B -n 1)
-current_tag=$(git describe --abbrev=0 --tags)
-
-case $merge_commit_message in
-  *#major*)
-    semver_bump $current_tag major
-    ;;
-  *#minor*)
-    semver_bump $current_tag minor
-    ;;
-  *)
-    semver_bump $current_tag patch
-    ;;
-esac
-
 git remote add github "https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY.git"
 git checkout $merge_commit_sha
+
+current_tag=$(git describe --abbrev=0 --tags 2>&1)
+if [[ $current_tag == "fatal: No names found, cannot describe anything." ]]; then
+  $current_tag="v1.0.0"
+else
+  case $merge_commit_message in
+    *#major*)
+      semver_bump $current_tag major
+      ;;
+    *#minor*)
+      semver_bump $current_tag minor
+      ;;
+    *)
+      semver_bump $current_tag patch
+      ;;
+  esac
+fi
+
 git tag $new_tag
 git push github --tags
