@@ -3,7 +3,7 @@ auto-tagger
 
 # Introduction
 
-This is a simple github action that is triggered on github PR merging that will increment the git tag on the merge commit following (semver)[https://semver.org].
+This is a simple github action that is triggered on github PR merging that will increment the git tag on the merge commit following [semver](https://semver.org).
 
 # Useage
 
