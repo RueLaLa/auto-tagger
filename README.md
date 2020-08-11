@@ -5,7 +5,7 @@ auto-tagger
 
 This is a simple github action that is triggered on github PR merging that will increment the git tag on the merge commit following [semver](https://semver.org).
 
-# Useage
+# Usage
 
 To use this, simply define an action configuration yaml in the `.github/workflows` directory of your repository with the following contents:
 ```
