@@ -36,7 +36,7 @@ case $merge_commit_message in
   *#minor*)
     semver_bump $current_tag minor
     ;;
-  *#patch*)
+  *)
     semver_bump $current_tag patch
     ;;
 esac
