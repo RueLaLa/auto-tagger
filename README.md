@@ -9,7 +9,7 @@ This is a simple github action that is triggered on github PR merging that will 
 
 To use this, simply define an action configuration yaml in the `.github/workflows` directory of your repository with the following contents:
 ```
-name: env_test
+name: auto_tagger
 on:
   pull_request:
    types: [closed]
