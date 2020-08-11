@@ -32,7 +32,7 @@ git checkout $merge_commit_sha
 
 current_tag=$(git describe --abbrev=0 --tags 2>&1)
 if [[ $current_tag == "fatal: No names found, cannot describe anything." ]]; then
-  $current_tag="v1.0.0"
+  current_tag="v1.0.0"
 else
   case $merge_commit_message in
     *#major*)
