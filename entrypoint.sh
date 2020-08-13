@@ -49,3 +49,10 @@ fi
 
 git tag $new_tag
 git push github --tags
+
+
+pr_number=$(cat "GITHUB_EVENT_PATH" | jq -r '.number')
+curl -XPOST \
+  -H "Accept: application/vnd.github.v3+json" \
+  https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/${pr_number}/comments \
+  -d "{\"body\": \"This PR has now been tagged as $new_tag\"}"
