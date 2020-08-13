@@ -1,56 +1,42 @@
 #!/bin/bash
 
 function semver_bump() {
-  RE='^v\([0-9]*\)[.]\([0-9]*\)[.]\([0-9]*\)$'
+  RE='^v([0-9]*)[.]([0-9]*)[.]([0-9]*)$'
 
-  MAJOR=$(echo $1 | sed -e "s|$RE|\1|")
-  MINOR=$(echo $1 | sed -e "s|$RE|\2|")
-  PATCH=$(echo $1 | sed -e "s|$RE|\3|")
-
-  case "$2" in
-  major)
-    let MAJOR+=1
-    let MINOR=0
-    let PATCH=0
+  if [[ $1 =~ $RE ]]; then
+    case "$2" in
+    *#major*)
+      new_tag="v$((${BASH_REMATCH[1]} + 1)).0.0"
     ;;
-  minor)
-    let MINOR+=1
-    let PATCH=0
+    *#minor*)
+      new_tag="v${BASH_REMATCH[1]}.$((${BASH_REMATCH[2]} + 1)).0"
     ;;
-  patch)
-    let PATCH+=1
+    *)
+      new_tag="v${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((${BASH_REMATCH[3]} + 1))"
     ;;
-  esac
-
-  new_tag="v$MAJOR.$MINOR.$PATCH"
+    esac
+ fi
 }
 
+# get merge commit and check it out locallt
 merge_commit_sha=$(cat "$GITHUB_EVENT_PATH" | jq -r '.pull_request.merge_commit_sha')
 merge_commit_message=$(git --no-pager log --format=%B -n 1)
 git remote add github "https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY.git"
 git checkout $merge_commit_sha
 
+# get current tag and bump it using the commit message as a key
 current_tag=$(git describe --abbrev=0 --tags 2>&1)
 if [[ $current_tag == *"fatal: No names found"* ]]; then
   new_tag="v1.0.0"
 else
-  case $merge_commit_message in
-    *#major*)
-      semver_bump $current_tag major
-      ;;
-    *#minor*)
-      semver_bump $current_tag minor
-      ;;
-    *)
-      semver_bump $current_tag patch
-      ;;
-  esac
+  semver_bump "$current_tag" "$merge_commit_message"
 fi
 
+# tag the commit with the new tag and push it to remote
 git tag $new_tag
 git push github --tags
 
-
+# comment on PR with new tag and link to tag release
 pr_number=$(cat "$GITHUB_EVENT_PATH" | jq -r '.number')
 curl -XPOST \
   -H "Authorization: Bearer $GITHUB_TOKEN" \

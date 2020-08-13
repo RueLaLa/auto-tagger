@@ -3,7 +3,7 @@ auto-tagger
 
 # Introduction
 
-This is a simple github action that is triggered on github PR merging that will increment the git tag on the merge commit following [semver](https://semver.org).
+This is a simple github action that is triggered on github PR merging that will increment the git tag on the merge commit following [semver](https://semver.org) and add a comment to the merged commit with the new tag.
 
 # Usage
 
@@ -22,7 +22,7 @@ jobs:
       with:
         fetch-depth: 0
     - name: Bump version and push tag
-      uses: RueLaLa/auto-tagger@master      
+      uses: RueLaLa/auto-tagger@master
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
