@@ -56,4 +56,4 @@ curl -XPOST \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
   -H "Accept: application/vnd.github.v3+json" \
   https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/${pr_number}/comments \
-  -d "{\"body\": \"This PR has now been tagged as $new_tag\"}"
+  -d "{\"body\": \"This PR has now been tagged as [$new_tag](https://github.com/${GITHUB_REPOSITORY}/releases/tag/${new_tag})\"}"
