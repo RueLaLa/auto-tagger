@@ -62,7 +62,7 @@ def main():
             comment_body = 'latest tag does not conform to semver, failed to bump version'
 
     create_and_push_tag(repo, event_info['pull_request']['merge_commit_sha'], new_tag)
-    comment_on_pr(event_info['number'], new_tag, comment_body)
+    comment_on_pr(event_info['number'], comment_body)
 
 
 if __name__ == '__main__':
