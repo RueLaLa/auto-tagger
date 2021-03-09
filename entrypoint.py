@@ -61,7 +61,9 @@ def main():
         except ValueError:
             comment_body = 'latest tag does not conform to semver (vMAJOR.MINOR.PATCH), failed to bump version'
 
-    create_and_push_tag(repo, event_info['pull_request']['merge_commit_sha'], new_tag)
+    if new_tag is not None:
+        create_and_push_tag(repo, event_info['pull_request']['merge_commit_sha'], new_tag)
+
     comment_on_pr(event_info['number'], comment_body)
 
 
