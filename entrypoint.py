@@ -34,10 +34,12 @@ def semver_bump(repo):
         new_tag (str): string of the new tag post incrementing semver section
     """
     current_tag = sorted(repo.tags, key=lambda t: t.commit.committed_datetime)[-1]
-    if not current_tag.startswith('v'):
-        raise ValueError('current tag does not begin with v prefix')
+    if current_tag.startswith('v'):
+        current_tag = str(current_tag)[1:]
+    else:
+        current_tag = str(current_tag)
 
-    curr_ver = semver.VersionInfo.parse(str(current_tag)[1:])
+    curr_ver = semver.VersionInfo.parse(current_tag)
     commit_msg = repo.head.commit.message
 
     if '#major' in commit_msg:
@@ -46,7 +48,11 @@ def semver_bump(repo):
         new_ver = curr_ver.bump_minor()
     else:
         new_ver = curr_ver.bump_patch()
-    return f'v{str(new_ver)}'
+
+    if current_tag.startswith('v'):
+        return f'v{str(new_ver)}'
+    else:
+        return str(new_ver)
 
 
 def create_and_push_tag(repo, merge_commit_sha, new_tag):
@@ -111,7 +117,7 @@ def main():
             new_tag = semver_bump(repo)
             comment_body = f"This PR has now been tagged as [{new_tag}](https://github.com/{os.getenv('GITHUB_REPOSITORY')}/releases/tag/{new_tag})"
         except ValueError:
-            comment_body = 'latest tag does not conform to semver (vMAJOR.MINOR.PATCH), failed to bump version'
+            comment_body = 'latest tag does not conform to semver ([v]?MAJOR.MINOR.PATCH), failed to bump version'
 
     if new_tag is not None:
         create_and_push_tag(repo, event_info['pull_request']['merge_commit_sha'], new_tag)
