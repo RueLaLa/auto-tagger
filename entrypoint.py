@@ -8,14 +8,28 @@ import requests
 import semver
 
 
-def semver_bump(curr_ver, commit_msg):
+def setup_git(event_info):
+    repo = git.Repo(os.getcwd())
+
+    origin_url = f'https://{os.getenv("GITHUB_ACTOR")}:{os.getenv("GITHUB_TOKEN")}@github.com/{os.getenv("GITHUB_REPOSITORY")}.git'
+    repo.create_remote('github',  origin_url)
+
+    repo.git.checkout(event_info['pull_request']['merge_commit_sha'])
+    return repo
+
+
+def semver_bump(repo):
+    current_tag = sorted(repo.tags, key=lambda t: t.commit.committed_datetime)[-1]
+    curr_ver = semver.VersionInfo.parse(current_tag[1:])
+    commit_msg = repo.head.commit
+
     if "#major" in commit_msg:
         new_ver = curr_ver.bump_major()
     elif "#minor" in commit_msg:
         new_ver = curr_ver.bump_minor()
     else:
         new_ver = curr_ver.bump_patch()
-    return str(new_ver)
+    return f'v{str(new_ver)}'
 
 
 def comment_on_pr(pr_number, comment_body):
@@ -29,31 +43,22 @@ def comment_on_pr(pr_number, comment_body):
 
 
 def main():
-    repo = git.Repo(os.getcwd())
     with open(os.getenv('GITHUB_EVENT_PATH')) as f:
         event_info = json.loads(f.read())
 
-    origin_url = f'https://{os.getenv("GITHUB_ACTOR")}:{os.getenv("GITHUB_TOKEN")}@github.com/{os.getenv("GITHUB_REPOSITORY")}.git'
-    repo.create_remote('github',  origin_url)
+    repo = setup_git(event_info)
 
-    merge_commit_sha = event_info['pull_request']['merge_commit_sha']
-    repo.git.checkout(merge_commit_sha)
-
-    current_tag = sorted(repo.tags, key=lambda t: t.commit.committed_datetime)[-1]
-
-    if current_tag is None:
+    if len(repo.tags) == 0:
         new_tag = 'v1.0.0'
     else:
         try:
-            current_version = semver.VersionInfo.parse(current_tag[1:])
-            merge_commit_message = repo.head.commit
-            new_tag = semver_bump(current_version, merge_commit_message)
-
-            repo.create_tag(new_tag, ref=merge_commit_sha)
-            repo.remote.github.push(new_tag)
+            new_tag = semver_bump(repo)
             comment_body = f'This PR has now been tagged as [$new_tag](https://github.com/{os.getenv("GITHUB_REPOSITORY")}/releases/tag/{new_tag})'
         except ValueError:
             comment_body = "latest tag does not conform to semver, failed to bump version"
+
+    repo.create_tag(new_tag, ref=event_info['pull_request']['merge_commit_sha'])
+    repo.remote.github.push(new_tag)
 
     comment_on_pr(event_info['number'], new_tag, comment_body)
 
