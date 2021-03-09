@@ -42,9 +42,7 @@ def comment_on_pr(pr_number, comment_body):
         'Accept': 'application/vnd.github.v3+json'
     }
     body = {'body': comment_body}
-    r = requests.post(url, headers=headers, data=body)
-    print(r.reason)
-    print(r.text)
+    requests.post(url, headers=headers, json=body)
 
 
 def main():
