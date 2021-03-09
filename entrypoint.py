@@ -17,7 +17,7 @@ def setup_git(event_info):
 def semver_bump(repo):
     current_tag = sorted(repo.tags, key=lambda t: t.commit.committed_datetime)[-1]
     curr_ver = semver.VersionInfo.parse(str(current_tag)[1:])
-    commit_msg = repo.head.commit
+    commit_msg = repo.head.commit.message
 
     if "#major" in commit_msg:
         new_ver = curr_ver.bump_major()
