@@ -10,10 +10,6 @@ import semver
 
 def setup_git(event_info):
     repo = git.Repo(os.getcwd())
-
-    origin_url = f'https://{os.getenv("GITHUB_ACTOR")}:{os.getenv("GITHUB_TOKEN")}@github.com/{os.getenv("GITHUB_REPOSITORY")}.git'
-    repo.create_remote('github',  origin_url)
-
     repo.git.checkout(event_info['pull_request']['merge_commit_sha'])
     return repo
 
@@ -30,6 +26,13 @@ def semver_bump(repo):
     else:
         new_ver = curr_ver.bump_patch()
     return f'v{str(new_ver)}'
+
+
+def create_and_push_tag(repo, merge_commit_sha, new_tag):
+    repo.create_tag(new_tag, ref=merge_commit_sha)
+    origin_url = f'https://{os.getenv("GITHUB_ACTOR")}:{os.getenv("GITHUB_TOKEN")}@github.com/{os.getenv("GITHUB_REPOSITORY")}.git'
+    gh_origin = repo.create_remote('github',  origin_url)
+    gh_origin.push(new_tag)
 
 
 def comment_on_pr(pr_number, comment_body):
@@ -57,9 +60,7 @@ def main():
         except ValueError:
             comment_body = "latest tag does not conform to semver, failed to bump version"
 
-    repo.create_tag(new_tag, ref=event_info['pull_request']['merge_commit_sha'])
-    repo.remote.github.push(new_tag)
-
+    create_and_push_tag(repo, event_info['pull_request']['merge_commit_sha'], new_tag)
     comment_on_pr(event_info['number'], new_tag, comment_body)
 
 
