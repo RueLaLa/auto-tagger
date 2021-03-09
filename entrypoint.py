@@ -30,7 +30,8 @@ def comment_on_pr(pr_number, comment_body):
 
 def main():
     repo = git.Repo(os.getcwd())
-    event_info = json.loads(os.getenv('GITHUB_EVENT_PATH'))
+    with open(os.getenv('GITHUB_EVENT_PATH')) as f:
+        event_info = json.loads(f.read())
 
     origin_url = f'https://{os.getenv("GITHUB_ACTOR")}:{os.getenv("GITHUB_TOKEN")}@github.com/{os.getenv("GITHUB_REPOSITORY")}.git'
     repo.create_remote('github',  origin_url)
