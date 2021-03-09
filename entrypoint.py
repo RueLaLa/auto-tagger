@@ -29,7 +29,7 @@ def comment_on_pr(pr_number, comment_body):
 
 
 def main():
-    repo = git.Repo(os.pwd())
+    repo = git.Repo(os.getcwd())
     event_info = json.loads(os.getenv('GITHUB_EVENT_PATH'))
 
     origin_url = f'https://{os.getenv("GITHUB_ACTOR")}:{os.getenv("GITHUB_TOKEN")}@github.com/{os.getenv("GITHUB_REPOSITORY")}.git'
