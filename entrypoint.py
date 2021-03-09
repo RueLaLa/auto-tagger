@@ -115,12 +115,12 @@ def main():
     else:
         try:
             new_tag = semver_bump(repo)
-            comment_body = f"This PR has now been tagged as [{new_tag}](https://github.com/{os.getenv('GITHUB_REPOSITORY')}/releases/tag/{new_tag})"
         except ValueError:
             comment_body = 'latest tag does not conform to semver ([v]?MAJOR.MINOR.PATCH), failed to bump version'
 
     if new_tag is not None:
         create_and_push_tag(repo, event_info['pull_request']['merge_commit_sha'], new_tag)
+        comment_body = f"This PR has now been tagged as [{new_tag}](https://github.com/{os.getenv('GITHUB_REPOSITORY')}/releases/tag/{new_tag})"
 
     comment_on_pr(event_info['number'], comment_body)
 
