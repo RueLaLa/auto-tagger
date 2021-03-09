@@ -39,7 +39,7 @@ def main():
     merge_commit_sha = event_info['pull_request']['merge_commit_sha']
     repo.git.checkout(merge_commit_sha)
 
-    current_tag = reversed(repo.tags)[0]
+    current_tag = sorted(repo.tags, key=lambda t: t.commit.committed_datetime)[-1]
 
     if current_tag is None:
         new_tag = 'v1.0.0'
