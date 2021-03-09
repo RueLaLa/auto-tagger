@@ -57,7 +57,7 @@ def main():
     else:
         try:
             new_tag = semver_bump(repo)
-            comment_body = f'This PR has now been tagged as [${new_tag}](https://github.com/{os.getenv("GITHUB_REPOSITORY")}/releases/tag/{new_tag})'
+            comment_body = f'This PR has now been tagged as [{new_tag}](https://github.com/{os.getenv("GITHUB_REPOSITORY")}/releases/tag/{new_tag})'
         except ValueError:
             comment_body = 'latest tag does not conform to semver, failed to bump version'
 
