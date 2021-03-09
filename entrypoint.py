@@ -52,6 +52,7 @@ def main():
     repo = setup_git(event_info)
 
     comment_body = ''
+    new_tag = None
     if len(repo.tags) == 0:
         new_tag = 'v1.0.0'
     else:
