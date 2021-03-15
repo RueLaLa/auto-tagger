@@ -4,8 +4,9 @@ import json
 import os
 
 import git
-import requests
 import semver
+
+from github import Github
 
 
 def setup_git(merge_commit_sha):
@@ -82,13 +83,10 @@ def comment_on_pr(pr_number, comment_body):
     Returns:
         None
     """
-    url = f"https://api.github.com/repos/{os.getenv('GITHUB_REPOSITORY')}/issues/{pr_number}/comments"
-    headers = {
-        'Authorization': f"Bearer {os.getenv('GITHUB_TOKEN')}",
-        'Accept': 'application/vnd.github.v3+json'
-    }
-    body = {'body': comment_body}
-    requests.post(url, headers=headers, json=body)
+    g = Github(os.getenv('GITHUB_TOKEN'))
+    repo = g.get_repo(os.getenv('GITHUB_REPOSITORY'))
+    pr = repo.get_pull(pr_number)
+    pr.create_review_comment(body=comment_body)
 
 
 def main():
