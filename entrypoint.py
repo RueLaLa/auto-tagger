@@ -86,7 +86,7 @@ def comment_on_pr(pr_number, comment_body):
     g = Github(os.getenv('GITHUB_TOKEN'))
     repo = g.get_repo(os.getenv('GITHUB_REPOSITORY'))
     pr = repo.get_pull(pr_number)
-    pr.create_review_comment(body=comment_body)
+    pr.create_issue_comment(body=comment_body)
 
 
 def main():
