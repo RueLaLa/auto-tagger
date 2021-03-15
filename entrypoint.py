@@ -35,10 +35,7 @@ def semver_bump(repo):
         new_tag (str): string of the new tag post incrementing semver section
     """
     current_tag = str(sorted(repo.tags, key=lambda t: t.commit.committed_datetime)[-1])
-    if current_tag.startswith('v'):
-        current_tag = current_tag[1:]
-
-    curr_ver = semver.VersionInfo.parse(current_tag)
+    curr_ver = semver.VersionInfo.parse(current_tag[1:] if current_tag.startswith('v') else current_tag)
     commit_msg = repo.head.commit.message
 
     if '#major' in commit_msg:
@@ -48,10 +45,7 @@ def semver_bump(repo):
     else:
         new_ver = curr_ver.bump_patch()
 
-    if current_tag.startswith('v'):
-        return f'v{str(new_ver)}'
-    else:
-        return str(new_ver)
+    return f'v{str(new_ver)}' if current_tag.startswith('v') else str(new_ver)
 
 
 def create_and_push_tag(repo, merge_commit_sha, new_tag):
