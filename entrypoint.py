@@ -34,7 +34,9 @@ def semver_bump(repo):
     Returns:
         new_tag (str): string of the new tag post incrementing semver section
     """
-    current_tag = str(sorted(repo.tags, key=lambda t: t.commit.committed_datetime)[-1])
+    # this line is a mess but basically, it lets you sort by date committed,
+    # then numeric sorts semver by splitting it into a list of ints
+    current_tag = str(sorted(repo.tags, key=lambda t: (t.commit.committed_datetime,  [int(t) for t in str(t).replace('v', '').split('.')]))[-1])
     curr_ver = semver.VersionInfo.parse(current_tag[1:] if current_tag.startswith('v') else current_tag)
     commit_msg = repo.head.commit.message
 
