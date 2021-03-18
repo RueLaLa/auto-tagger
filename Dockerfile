@@ -1,5 +1,6 @@
-FROM alpine:latest
+FROM python:3.9.2-alpine3.13
 
-RUN apk update && apk add bash git jq curl && rm -rf /etc/apk/cache
-COPY entrypoint.sh /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+RUN apk add --update --no-cache git && rm -rf /etc/apk/cache
+COPY entrypoint.py requirements.txt /
+RUN pip install --no-cache-dir -r requirements.txt
+ENTRYPOINT ["/entrypoint.py"]
