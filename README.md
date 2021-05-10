@@ -25,9 +25,17 @@ jobs:
       uses: RueLaLa/auto-tagger@master
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_PR_NUMBER: ${{ github.event.number }}
 ```
 
 The default Github token created for the action to use has enough permissions to checkout, tag, and push the new tag on the repo that this action is defined in.
+
+# Local Testing
+
+To test the semver component locally, simply run the below command in the git directory in which you want to test:
+```
+DRYRUN=True GITHUB_SHA=$(git rev-parse HEAD) /path/to/auto-tagger/entrypoint.py
+```
 
 # Usage
 

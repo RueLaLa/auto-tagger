@@ -24,25 +24,47 @@ def setup_git(merge_commit_sha):
     return repo
 
 
-def semver_bump(repo):
+def get_current_tag(tags):
+    """Gets a list of all tags and sorts them. The first sort is by commit date, but then
+    it is sorted numerically by the semver tag number in the event of two tags on a single commit.
+
+    Args:
+        tags (list(object)): a list of tags from the current
+
+    Returns:
+        current_tag (str): string of the latest tag on the latest commit
+    """
+    sorted_tags = sorted(tags, key=lambda t: t.commit.committed_datetime, reverse=True)
+    current_tags = [tag for tag in sorted_tags if tag.commit.committed_datetime == sorted_tags[0].commit.committed_datetime]
+    if len(current_tags) > 1:
+        try:
+            current_tags = sorted(current_tags, key=lambda t: [int(t) for t in str(t).replace('v', '').split('.')], reverse=True)
+        except ValueError:
+            comment_on_pr(f'latest tag ({current_tags}) does not conform to semver ([v]?MAJOR.MINOR.PATCH), failed to bump version')
+            exit(1)
+    return(str(current_tags[0]))
+
+
+def semver_bump(current_tag, commit_message):
     """Loads the most recently created tag from the git repo and parses it into a semver object.
     It is then incremented by a keyword in the commit message. Parsing exceptions are handled in parent function.
 
     Args:
-        repo (object): git repo object
+        current_tag (string): current and latest tag found on the repo
+        commit_message (string): commit message used to parse which semver section to bump
 
     Returns:
         new_tag (str): string of the new tag post incrementing semver section
     """
-    # this line is a mess but basically, it lets you sort by date committed,
-    # then numeric sorts semver by splitting it into a list of ints
-    current_tag = str(sorted(repo.tags, key=lambda t: (t.commit.committed_datetime,  [int(t) for t in str(t).replace('v', '').split('.')]))[-1])
-    curr_ver = semver.VersionInfo.parse(current_tag[1:] if current_tag.startswith('v') else current_tag)
-    commit_msg = repo.head.commit.message
+    try:
+        curr_ver = semver.VersionInfo.parse(current_tag.replace('v', ''))
+    except ValueError:
+        comment_on_pr(f'latest tag ({current_tag}) does not conform to semver ([v]?MAJOR.MINOR.PATCH), failed to bump version')
+        exit(1)
 
-    if '#major' in commit_msg:
+    if '#major' in commit_message:
         new_ver = curr_ver.bump_major()
-    elif '#minor' in commit_msg:
+    elif '#minor' in commit_message:
         new_ver = curr_ver.bump_minor()
     else:
         new_ver = curr_ver.bump_patch()
@@ -68,12 +90,11 @@ def create_and_push_tag(repo, merge_commit_sha, new_tag):
     gh_origin.push(new_tag)
 
 
-def comment_on_pr(pr_number, comment_body):
+def comment_on_pr(comment_body):
     """Comments on github PR with a given message.
     Authentication is handled by environment variables passed in from github actions.
 
     Args:
-        pr_number (int): number of the pull request. determines where to post message
         comment_body (str): message to be posted to pull request by github actions bot
 
     Returns:
@@ -81,6 +102,14 @@ def comment_on_pr(pr_number, comment_body):
     """
     g = Github(os.getenv('GITHUB_TOKEN'))
     repo = g.get_repo(os.getenv('GITHUB_REPOSITORY'))
+
+    if os.getenv('GITHUB_PR_NUMBER'):
+        pr_number = os.getenv('GITHUB_PR_NUMBER')
+    else:
+        with open(os.getenv('GITHUB_EVENT_PATH')) as f:
+            event_info = json.loads(f.read())
+        pr_number = event_info['number']
+
     pr = repo.get_pull(pr_number)
     pr.create_issue_comment(body=comment_body)
 
@@ -95,26 +124,23 @@ def main():
     Returns:
         None
     """
-    with open(os.getenv('GITHUB_EVENT_PATH')) as f:
-        event_info = json.loads(f.read())
-
-    repo = setup_git(event_info['pull_request']['merge_commit_sha'])
+    repo = setup_git(os.getenv('GITHUB_SHA'))
 
     comment_body = ''
     new_tag = None
     if len(repo.tags) == 0:
         new_tag = 'v1.0.0'
     else:
-        try:
-            new_tag = semver_bump(repo)
-        except ValueError:
-            comment_body = 'latest tag does not conform to semver ([v]?MAJOR.MINOR.PATCH), failed to bump version'
+        current_tag = get_current_tag(repo.tags)
+        new_tag = semver_bump(current_tag, repo.head.commit.message)
 
     if new_tag is not None:
-        create_and_push_tag(repo, event_info['pull_request']['merge_commit_sha'], new_tag)
         comment_body = f"This PR has now been tagged as [{new_tag}](https://github.com/{os.getenv('GITHUB_REPOSITORY')}/releases/tag/{new_tag})"
-
-    comment_on_pr(event_info['number'], comment_body)
+        if os.getenv('DRYRUN'):
+            print(comment_body)
+            exit(0)
+        create_and_push_tag(repo, os.getenv('GITHUB_SHA'), new_tag)
+        comment_on_pr(comment_body)
 
 
 if __name__ == '__main__':
