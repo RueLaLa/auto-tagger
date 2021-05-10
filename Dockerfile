@@ -1,4 +1,4 @@
-FROM python:3.9.2-alpine3.13
+FROM python:3.9-alpine
 
 RUN apk add --update --no-cache git && rm -rf /etc/apk/cache
 COPY entrypoint.py requirements.txt /
