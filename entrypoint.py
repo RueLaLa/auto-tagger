@@ -104,7 +104,7 @@ def comment_on_pr(comment_body):
     repo = g.get_repo(os.getenv('GITHUB_REPOSITORY'))
 
     if os.getenv('GITHUB_PR_NUMBER'):
-        pr_number = os.getenv('GITHUB_PR_NUMBER')
+        pr_number = int(os.getenv('GITHUB_PR_NUMBER'))
     else:
         with open(os.getenv('GITHUB_EVENT_PATH')) as f:
             event_info = json.loads(f.read())
