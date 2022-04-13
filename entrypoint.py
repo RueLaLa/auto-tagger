@@ -20,6 +20,7 @@ def setup_git(merge_commit_sha):
         repo (object): git repo object
     """
     repo = git.Repo(os.getcwd())
+    repo.config_writer(config_level='global').set_value('safe', 'directory', os.getcwd())
     repo.git.checkout(merge_commit_sha)
     return repo
 
