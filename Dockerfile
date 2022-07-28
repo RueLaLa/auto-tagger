@@ -6,7 +6,8 @@ RUN printf "https://dl-cdn.alpinelinux.org/alpine/edge/community/\nhttps://dl-cd
       py3-gitpython==3.1.27-r0 \
       py3-pygithub==1.55-r0 \
       py3-semver==2.13.0-r2 \
-    && rm -rf /etc/apk/cache
+    && rm -rf /etc/apk/cache \
+    && git config --global --add safe.directory /github/workspace
 
 COPY entrypoint.py /
 ENTRYPOINT ["/entrypoint.py"]
