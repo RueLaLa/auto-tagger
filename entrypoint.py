@@ -9,6 +9,26 @@ import semver
 from github import Github
 
 
+class SemVerWithVPrefix(semver.VersionInfo):
+    """Class to handle semver parsing with v prefix
+
+    Args:
+        version_string (str): version string with v prefix
+
+    Returns:
+        instance of sv (semver.Version): parsed semver version object
+    """
+
+    @classmethod
+    def parse(cls, version):
+        parse = version[1:] if version[0] in ("v", "V") else version
+        self = super(SemVerWithVPrefix, cls).parse(parse)
+        return self
+
+    def __str__(self):
+        return "v" + super(SemVerWithVPrefix, self).__str__()
+
+
 def setup_git(merge_commit_sha):
     """Initializes the git repo and checks out the commit ID created from the pull request.
     Assumes the current directory is the git repo to be loaded.
@@ -20,7 +40,9 @@ def setup_git(merge_commit_sha):
         repo (object): git repo object
     """
     repo = git.Repo(os.getcwd())
-    repo.config_writer(config_level='global').set_value('safe', 'directory', os.getcwd())
+    repo.config_writer(config_level="global").set_value(
+        "safe", "directory", os.getcwd()
+    )
     repo.git.checkout(merge_commit_sha)
     return repo
 
@@ -33,17 +55,15 @@ def get_current_tag(tags):
         tags (list(object)): a list of tags from the current
 
     Returns:
-        current_tag (str): string of the latest tag on the latest commit
+        current_tag (semver.Version): parsed semver version of the latest tag on the latest commit
     """
-    sorted_tags = sorted(tags, key=lambda t: t.commit.committed_datetime, reverse=True)
-    current_tags = [tag for tag in sorted_tags if tag.commit.committed_datetime == sorted_tags[0].commit.committed_datetime]
-    if len(current_tags) > 1:
-        try:
-            current_tags = sorted(current_tags, key=lambda t: [int(t) for t in str(t).replace('v', '').split('.')], reverse=True)
-        except ValueError:
-            comment_on_pr(f'latest tag ({current_tags}) does not conform to semver ([v]?MAJOR.MINOR.PATCH), failed to bump version')
-            exit(1)
-    return(str(current_tags[0]))
+    newest_tag_date = max([tag.commit.committed_datetime for tag in tags])
+    latest_tags = [
+        SemVerWithVPrefix.parse(str(tag))
+        for tag in tags
+        if tag.commit.committed_datetime == newest_tag_date
+    ]
+    return max(latest_tags)
 
 
 def semver_bump(current_tag, commit_message):
@@ -51,26 +71,20 @@ def semver_bump(current_tag, commit_message):
     It is then incremented by a keyword in the commit message. Parsing exceptions are handled in parent function.
 
     Args:
-        current_tag (string): current and latest tag found on the repo
+        current_tag (semver.Version): current and latest tag found on the repo
         commit_message (string): commit message used to parse which semver section to bump
 
     Returns:
         new_tag (str): string of the new tag post incrementing semver section
     """
-    try:
-        curr_ver = semver.VersionInfo.parse(current_tag.replace('v', ''))
-    except ValueError:
-        comment_on_pr(f'latest tag ({current_tag}) does not conform to semver ([v]?MAJOR.MINOR.PATCH), failed to bump version')
-        exit(1)
-
-    if '#major' in commit_message:
-        new_ver = curr_ver.bump_major()
-    elif '#minor' in commit_message:
-        new_ver = curr_ver.bump_minor()
+    if "#major" in commit_message:
+        new_ver = current_tag.bump_major()
+    elif "#minor" in commit_message:
+        new_ver = current_tag.bump_minor()
     else:
-        new_ver = curr_ver.bump_patch()
+        new_ver = current_tag.bump_patch()
 
-    return f'v{str(new_ver)}' if current_tag.startswith('v') else str(new_ver)
+    return str(new_ver)
 
 
 def create_and_push_tag(repo, merge_commit_sha, new_tag):
@@ -87,7 +101,7 @@ def create_and_push_tag(repo, merge_commit_sha, new_tag):
     """
     repo.create_tag(new_tag, ref=merge_commit_sha)
     origin_url = f"https://{os.getenv('GITHUB_ACTOR')}:{os.getenv('GITHUB_TOKEN')}@github.com/{os.getenv('GITHUB_REPOSITORY')}.git"
-    gh_origin = repo.create_remote('github',  origin_url)
+    gh_origin = repo.create_remote("github", origin_url)
     gh_origin.push(new_tag)
 
 
@@ -101,15 +115,15 @@ def comment_on_pr(comment_body):
     Returns:
         None
     """
-    g = Github(os.getenv('GITHUB_TOKEN'))
-    repo = g.get_repo(os.getenv('GITHUB_REPOSITORY'))
+    g = Github(os.getenv("GITHUB_TOKEN"))
+    repo = g.get_repo(os.getenv("GITHUB_REPOSITORY"))
 
-    if os.getenv('GITHUB_PR_NUMBER'):
-        pr_number = int(os.getenv('GITHUB_PR_NUMBER'))
+    if os.getenv("GITHUB_PR_NUMBER"):
+        pr_number = int(os.getenv("GITHUB_PR_NUMBER"))
     else:
-        with open(os.getenv('GITHUB_EVENT_PATH')) as f:
+        with open(os.getenv("GITHUB_EVENT_PATH")) as f:
             event_info = json.loads(f.read())
-        pr_number = event_info['number']
+        pr_number = event_info["number"]
 
     pr = repo.get_pull(pr_number)
     pr.create_issue_comment(body=comment_body)
@@ -125,24 +139,22 @@ def main():
     Returns:
         None
     """
-    repo = setup_git(os.getenv('GITHUB_SHA'))
+    repo = setup_git(os.getenv("GITHUB_SHA"))
 
-    comment_body = ''
-    new_tag = None
     if len(repo.tags) == 0:
-        new_tag = 'v1.0.0'
+        new_tag = "v1.0.0"
     else:
         current_tag = get_current_tag(repo.tags)
         new_tag = semver_bump(current_tag, repo.head.commit.message)
 
-    if new_tag is not None:
-        comment_body = f"This PR has now been tagged as [{new_tag}](https://github.com/{os.getenv('GITHUB_REPOSITORY')}/releases/tag/{new_tag})"
-        if os.getenv('DRYRUN'):
-            print(comment_body)
-            exit(0)
-        create_and_push_tag(repo, os.getenv('GITHUB_SHA'), new_tag)
-        comment_on_pr(comment_body)
+    comment_body = f"This PR has now been tagged as [{new_tag}](https://github.com/{os.getenv('GITHUB_REPOSITORY')}/releases/tag/{new_tag})"
+    print(comment_body)
+    if os.getenv("DRYRUN"):
+        return
+
+    create_and_push_tag(repo, os.getenv("GITHUB_SHA"), new_tag)
+    comment_on_pr(comment_body)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
